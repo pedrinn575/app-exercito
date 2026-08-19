@@ -1,0 +1,46 @@
+# =============================================================================
+# Configuração Spring Boot — Sistema de Escalas Militares
+# Variáveis sensíveis vêm do .env ou variáveis de ambiente do SO
+# =============================================================================
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: escalas
+
+  datasource:
+    url: ${SUPABASE_DB_URL:jdbc:postgresql://localhost:5432/escalas}
+    username: ${SUPABASE_DB_USER:postgres}
+    password: ${SUPABASE_DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # Não executar migrations automaticamente — usar scripts em database/
+  flyway:
+    enabled: false
+
+# Configuração JWT
+jwt:
+  secret: ${JWT_SECRET:altere-esta-chave-secreta-com-pelo-menos-32-caracteres}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+# Seed de dados de desenvolvimento (desabilitar em produção)
+app:
+  seed:
+    enabled: ${APP_SEED_ENABLED:true}
+
+# CORS — origem do frontend Vite
+cors:
+  allowed-origins: http://localhost:5173

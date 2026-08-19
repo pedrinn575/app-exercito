@@ -1,0 +1,345 @@
+/* =============================================================================
+   Estilos globais — Sistema de Escalas Militares
+   ============================================================================= */
+
+:root {
+  --cor-primaria: #2d5016;
+  --cor-primaria-hover: #3d6b1e;
+  --cor-secundaria: #4a4a4a;
+  --cor-fundo: #f4f5f0;
+  --cor-card: #ffffff;
+  --cor-borda: #d4d4c8;
+  --cor-texto: #1a1a1a;
+  --cor-texto-suave: #666;
+  --cor-erro: #c0392b;
+  --cor-sidebar: #1e3a0f;
+  --sombra: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --raio: 8px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+  color: var(--cor-texto);
+  background: var(--cor-fundo);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* --- Layout --- */
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+}
+
+.app-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+/* --- Header --- */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--cor-primaria);
+  color: white;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-brand h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.header-icon {
+  font-size: 1.5rem;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-papel {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: 240px;
+  background: var(--cor-sidebar);
+  padding: 1rem 0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.sidebar-link-active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border-left: 3px solid #8bc34a;
+}
+
+.sidebar-icon {
+  font-size: 1.1rem;
+}
+
+/* --- Botões --- */
+.btn {
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: var(--raio);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary {
+  background: var(--cor-primaria);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--cor-primaria-hover);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Inputs --- */
+.input-group {
+  margin-bottom: 1rem;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--cor-texto-suave);
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--cor-primaria);
+}
+
+/* --- Login --- */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e3a0f 0%, #2d5016 50%, #4a7c23 100%);
+}
+
+.login-card {
+  background: var(--cor-card);
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-icon {
+  font-size: 2.5rem;
+}
+
+.login-header h1 {
+  font-size: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.login-header p {
+  color: var(--cor-texto-suave);
+  font-size: 0.9rem;
+}
+
+.login-erro {
+  background: #fde8e8;
+  color: var(--cor-erro);
+  padding: 0.6rem;
+  border-radius: var(--raio);
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.login-hint {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--cor-texto-suave);
+}
+
+/* --- Dashboard --- */
+.dashboard h2 {
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-subtitulo {
+  color: var(--cor-texto-suave);
+  margin-bottom: 2rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-card {
+  background: var(--cor-card);
+  padding: 1.5rem;
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  text-decoration: none;
+  color: var(--cor-texto);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--cor-borda);
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-card h3 {
+  margin-bottom: 0.5rem;
+  color: var(--cor-primaria);
+}
+
+.dashboard-card p {
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+/* --- Stub page --- */
+.stub-page {
+  background: var(--cor-card);
+  padding: 2rem;
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  text-align: center;
+}
+
+.stub-descricao {
+  color: var(--cor-texto-suave);
+  margin: 1rem 0;
+}
+
+.stub-badge {
+  display: inline-block;
+  background: #fff3cd;
+  color: #856404;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* --- Tabela --- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--cor-card);
+  border-radius: var(--raio);
+  overflow: hidden;
+  box-shadow: var(--sombra);
+  margin-top: 1rem;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.data-table th {
+  background: var(--cor-fundo);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--cor-texto-suave);
+}
+
+/* --- Utilitários --- */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 1.1rem;
+  color: var(--cor-texto-suave);
+}
+
+h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
