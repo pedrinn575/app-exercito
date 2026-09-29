@@ -1,0 +1,20 @@
+# Dependências / ambiente
+/vendor/
+.env
+.env.*
+
+# Banco e storage local
+/storage/*.sqlite
+/storage/*.sqlite-*
+/storage/*
+!/storage/.gitkeep
+
+# IDE / SO
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
