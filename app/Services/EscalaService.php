@@ -73,7 +73,8 @@ final class EscalaService
         string $data,
         int $adminId,
         ?int $qtdMonitores = null,
-        ?int $qtdAtiradores = null
+        ?int $qtdAtiradores = null,
+        bool $propagar = true
     ): Escala {
         $this->assertTipo($tipo);
 
@@ -107,20 +108,22 @@ final class EscalaService
             $escalaId = $this->escalas->create($tipo, $data, $adminId, $obs);
         }
 
-        // Uma escala refeita retoma a mesma posição da fila que já usava
-        $inicios = $existente
-            ? $this->escalas->inicios($escalaId)
-            : $this->escalas->proximosInicios($data);
-        $this->escalas->updateInicios($escalaId, $inicios['monitor'], $inicios['atirador']);
-
-        $semFolga = 0;
-        $semFolga += $this->preencher($escalaId, 'monitor', $qtdMonitores, $inicios['monitor'], $data);
-        $semFolga += $this->preencher($escalaId, 'atirador', $qtdAtiradores, $inicios['atirador'], $data);
+        // Continua depois da véspera. Refazer também recalcula, senão o dia
+        // seguinte fica com a mesma turma.
+        $inicios = $this->proximosInicios($data, $escalaId);
+        $monitores = $this->preencher($escalaId, 'monitor', $qtdMonitores, $inicios['monitor'], $data);
+        $atiradores = $this->preencher($escalaId, 'atirador', $qtdAtiradores, $inicios['atirador'], $data);
+        $this->escalas->updateInicios($escalaId, $monitores['inicio'], $atiradores['inicio']);
+        $semFolga = $monitores['semFolga'] + $atiradores['semFolga'];
 
         if ($semFolga > 0) {
             $aviso = $semFolga . ' militar(es) entraram sem completar as ' . $this->intervaloHoras . 'h de folga.';
             $obs = $obs ? $obs . ' ' . $aviso : $aviso;
             $this->escalas->updateObservacao($escalaId, $obs);
+        }
+
+        if ($propagar) {
+            $this->reposicionarSeguintes($data, $adminId);
         }
 
         $result = $this->escalas->findById($escalaId);
@@ -131,8 +134,40 @@ final class EscalaService
     }
 
     /**
-     * Escala a quantidade pedida seguindo a fila a partir de $inicio,
-     * dando a volta ao chegar no fim. Devolve quantos entraram sem as 48h.
+     * Onde a fila deve começar neste dia: logo depois da última escala anterior.
+     * Preta e vermelha do mesmo dia contam as duas.
+     *
+     * @return array{monitor:int,atirador:int}
+     */
+    private function proximosInicios(string $data, ?int $excetoId = null): array
+    {
+        $cursor = ['monitor' => 0, 'atirador' => 0];
+        $dataCursor = ['monitor' => null, 'atirador' => null];
+
+        foreach ($this->escalas->escalasAnteriores($data, $excetoId) as $row) {
+            foreach (['monitor', 'atirador'] as $funcao) {
+                $usados = (int) $row['usados_' . $funcao];
+                if ($usados === 0) {
+                    continue;
+                }
+                $fim = (int) $row['inicio_' . $funcao] + $usados;
+                $quando = $row['data_servico'];
+                if ($dataCursor[$funcao] === null || $quando > $dataCursor[$funcao] || ($quando === $dataCursor[$funcao] && $fim > $cursor[$funcao])) {
+                    $dataCursor[$funcao] = $quando;
+                    $cursor[$funcao] = $fim;
+                }
+            }
+        }
+
+        return $cursor;
+    }
+
+    /**
+     * Escala a quantidade pedida a partir de $inicio.
+     * Quem não completou a folga é pulado e entra o próximo da fila.
+     * Só força a entrada se não houver gente suficiente com folga.
+     *
+     * @return array{semFolga:int,inicio:int}
      */
     private function preencher(
         int $escalaId,
@@ -140,27 +175,60 @@ final class EscalaService
         int $quantidade,
         int $inicio,
         string $data
-    ): int {
+    ): array {
         $fila = $this->fila($funcao);
         $total = count($fila);
         if ($total === 0 || $quantidade === 0) {
-            return 0;
+            return ['semFolga' => 0, 'inicio' => $inicio];
         }
 
-        // Ninguém entra duas vezes no mesmo dia
         $quantidade = min($quantidade, $total);
-        $semFolga = 0;
+        $escolhidos = [];
+        $semFolgaNaFila = [];
 
-        for ($i = 0; $i < $quantidade; $i++) {
-            $militar = $fila[($inicio + $i) % $total];
-            // Antes de inserir: senão o próprio dia conta como serviço anterior
-            if (!$this->temFolga((int) $militar->id, $data)) {
-                $semFolga++;
+        for ($i = 0; $i < $total && count($escolhidos) < $quantidade; $i++) {
+            $abs = $inicio + $i;
+            $militar = $fila[$abs % $total];
+            $id = (int) $militar->id;
+            if (isset($escolhidos[$id]) || isset($semFolgaNaFila[$id])) {
+                continue;
             }
-            $this->escalas->addPosto($escalaId, (int) $militar->id, $funcao);
+            if ($this->escalas->servicoDentroDoIntervalo($id, $data, $this->intervaloHoras, $escalaId)) {
+                $semFolgaNaFila[$id] = $abs;
+                continue;
+            }
+            $escolhidos[$id] = $abs;
         }
 
-        return $semFolga;
+        $semFolga = 0;
+        foreach ($semFolgaNaFila as $id => $abs) {
+            if (count($escolhidos) >= $quantidade) {
+                break;
+            }
+            $escolhidos[$id] = $abs;
+            $semFolga++;
+        }
+
+        if ($escolhidos === []) {
+            return ['semFolga' => 0, 'inicio' => $inicio];
+        }
+
+        $porIndice = [];
+        foreach ($escolhidos as $id => $abs) {
+            $porIndice[$abs] = $id;
+        }
+        ksort($porIndice);
+        foreach ($porIndice as $id) {
+            $this->escalas->addPosto($escalaId, $id, $funcao);
+        }
+
+        $ultimo = (int) array_key_last($porIndice);
+        $colocados = count($porIndice);
+
+        return [
+            'semFolga' => $semFolga,
+            'inicio'   => $ultimo + 1 - $colocados,
+        ];
     }
 
     /**
@@ -174,14 +242,68 @@ final class EscalaService
         return $this->usuarios->filaDaFuncao($funcao, $funcao === 'monitor');
     }
 
-    /** A folga de 48h considera qualquer serviço, preto ou vermelho. */
-    private function temFolga(int $usuarioId, string $data): bool
+    /**
+     * Dias seguintes que repetem gente sem folga, ou que não continuam a fila,
+     * são refeitos na ordem do calendário.
+     */
+    private function reposicionarSeguintes(string $data, int $adminId): void
     {
-        $ultima = $this->escalas->ultimaDataServico($usuarioId);
-        if ($ultima === null) {
+        foreach ($this->escalas->datasComEscalaDepois($data) as $dia) {
+            foreach (['preta', 'vermelha'] as $tipo) {
+                $esc = $this->escalas->findByTipoData($tipo, $dia);
+                if (!$esc || $esc->postos === []) {
+                    continue;
+                }
+                if (!$this->diaPrecisaReposicionar($esc, $dia)) {
+                    continue;
+                }
+
+                $monitores = 0;
+                $atiradores = 0;
+                $reservas = [];
+                foreach ($esc->postos as $posto) {
+                    if ($posto['funcao'] === 'monitor') {
+                        $monitores++;
+                    } elseif ($posto['funcao'] === 'atirador') {
+                        $atiradores++;
+                    } elseif ($posto['funcao'] === 'reserva') {
+                        $reservas[] = (int) $posto['usuario_id'];
+                    }
+                }
+
+                $this->regerar($tipo, $dia, $adminId, $monitores, $atiradores, false);
+                $refeita = $this->escalas->findByTipoData($tipo, $dia);
+                if (!$refeita) {
+                    continue;
+                }
+                foreach ($reservas as $usuarioId) {
+                    if ($this->escalas->findPostoNaEscala((int) $refeita->id, $usuarioId)) {
+                        continue;
+                    }
+                    $this->escalas->addPosto((int) $refeita->id, $usuarioId, 'reserva');
+                }
+            }
+        }
+    }
+
+    private function diaPrecisaReposicionar(Escala $escala, string $data): bool
+    {
+        $esperado = $this->proximosInicios($data, (int) $escala->id);
+        $atual = $this->escalas->inicios((int) $escala->id);
+        if ($atual['monitor'] !== $esperado['monitor'] || $atual['atirador'] !== $esperado['atirador']) {
             return true;
         }
-        return abs(strtotime($data) - strtotime($ultima)) / 3600 >= $this->intervaloHoras;
+
+        foreach ($escala->postos as $posto) {
+            if ($posto['funcao'] === 'reserva') {
+                continue;
+            }
+            if ($this->escalas->servicoDentroDoIntervalo((int) $posto['usuario_id'], $data, $this->intervaloHoras, (int) $escala->id)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -233,8 +355,10 @@ final class EscalaService
                 $criadas++;
             }
 
-            $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores);
+            $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores, false);
         }
+
+        $this->reposicionarSeguintes($inicio, $adminId);
 
         return ['criadas' => $criadas, 'puladas' => $puladas, 'refeitas' => $refeitas];
     }
@@ -247,7 +371,8 @@ final class EscalaService
         string $data,
         int $adminId,
         ?int $qtdMonitores = null,
-        ?int $qtdAtiradores = null
+        ?int $qtdAtiradores = null,
+        bool $propagar = true
     ): Escala {
         $this->assertTipo($tipo);
         $existente = $this->escalas->findByTipoData($tipo, $data);
@@ -256,7 +381,7 @@ final class EscalaService
             $this->escalas->updateObservacao((int) $existente->id, null);
         }
 
-        return $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores);
+        return $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores, $propagar);
     }
 
     /**
@@ -344,6 +469,24 @@ final class EscalaService
             ];
         }
         return $mapa;
+    }
+
+    /**
+     * @return array<string, array{tipo:string,funcao:string}>
+     */
+    public function diasDoUsuarioNoMes(int $usuarioId, string $anoMes): array
+    {
+        $dias = [];
+        foreach ($this->escalas->diasDoUsuarioNoMes($usuarioId, $anoMes) as $row) {
+            $data = $row['data_servico'];
+            if (!isset($dias[$data])) {
+                $dias[$data] = [
+                    'tipo'   => $row['tipo'],
+                    'funcao' => $row['funcao'],
+                ];
+            }
+        }
+        return $dias;
     }
 
     /** @return list<array<string,mixed>> */

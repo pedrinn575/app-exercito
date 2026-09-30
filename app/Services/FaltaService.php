@@ -64,6 +64,80 @@ final class FaltaService
         return $this->faltas->listar();
     }
 
+    /**
+     * Presença é o serviço de um dia que já passou e não teve falta.
+     *
+     * @return array{
+     *   presencas:int,justificadas:int,injustificadas:int,servicos:int,
+     *   dias:list<array{data:string,presencas:int,faltas:int}>,
+     *   atiradores:list<array{numero:string,nome:string,presencas:int,justificadas:int,injustificadas:int}>
+     * }
+     */
+    public function painelAtiradores(?string $ate = null): array
+    {
+        $ate = $ate ?? date('Y-m-d');
+        $presencas = 0;
+        $justificadas = 0;
+        $injustificadas = 0;
+        $dias = [];
+        $pessoas = [];
+
+        foreach ($this->faltas->servicosPassadosAtirador($ate) as $row) {
+            $resultado = $row['resultado'];
+            if ($resultado === 'injustificada') {
+                $injustificadas++;
+            } elseif ($resultado === 'justificada') {
+                $justificadas++;
+            } else {
+                $presencas++;
+            }
+
+            $data = $row['data_servico'];
+            if (!isset($dias[$data])) {
+                $dias[$data] = ['data' => $data, 'presencas' => 0, 'faltas' => 0];
+            }
+            if ($resultado === 'presenca') {
+                $dias[$data]['presencas']++;
+            } else {
+                $dias[$data]['faltas']++;
+            }
+
+            $id = (int) $row['id'];
+            if (!isset($pessoas[$id])) {
+                $pessoas[$id] = [
+                    'numero' => $row['numero'],
+                    'nome' => $row['nome'],
+                    'presencas' => 0,
+                    'justificadas' => 0,
+                    'injustificadas' => 0,
+                ];
+            }
+            if ($resultado === 'injustificada') {
+                $pessoas[$id]['injustificadas']++;
+            } elseif ($resultado === 'justificada') {
+                $pessoas[$id]['justificadas']++;
+            } else {
+                $pessoas[$id]['presencas']++;
+            }
+        }
+
+        $atiradores = array_values($pessoas);
+        usort($atiradores, function (array $a, array $b): int {
+            $fa = $a['justificadas'] + $a['injustificadas'];
+            $fb = $b['justificadas'] + $b['injustificadas'];
+            return $fb <=> $fa ?: ((int) $a['numero'] <=> (int) $b['numero']);
+        });
+
+        return [
+            'presencas' => $presencas,
+            'justificadas' => $justificadas,
+            'injustificadas' => $injustificadas,
+            'servicos' => $presencas + $justificadas + $injustificadas,
+            'dias' => array_values($dias),
+            'atiradores' => $atiradores,
+        ];
+    }
+
     private function requirePosto(int $id): array
     {
         $p = $this->escalas->findPosto($id);

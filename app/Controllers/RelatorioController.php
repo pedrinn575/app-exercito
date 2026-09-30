@@ -24,8 +24,9 @@ final class RelatorioController
             'metricas'  => $this->dashboard->metricas(),
             'pretas'    => $this->escalas->listar('preta'),
             'vermelhas' => $this->escalas->listar('vermelha'),
-            'trocas'    => $this->trocas->listar(),
+            'trocas'    => $this->trocas->listarParaAdmin(),
             'faltas'    => $this->faltas->listar(),
+            'painel'    => $this->faltas->painelAtiradores(),
             'pageTitle' => 'Relatórios',
         ]);
     }

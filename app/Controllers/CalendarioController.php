@@ -37,12 +37,18 @@ final class CalendarioController
             $tipos[$data] = (Calendar::isEscalaVermelha($data) || isset($extras[$data])) ? 'vermelha' : 'preta';
         }
 
+        $user = Auth::user();
+        $meusDias = $user
+            ? $this->escalas->diasDoUsuarioNoMes((int) $user['id'], $mes)
+            : [];
+
         View::render('calendario/index', [
             'mes'       => $mes,
             'mapa'      => $this->escalas->mapaMes($mes),
             'feriados'  => $feriados,
             'tipos'     => $tipos,
             'efetivo'   => $this->escalas->efetivoPadrao(),
+            'meusDias'  => $meusDias,
             'pageTitle' => 'Calendário',
         ]);
     }

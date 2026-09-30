@@ -20,6 +20,14 @@ final class DashboardController
         $hoje = $metricas['hoje'];
         $tipoHoje = $this->escalas->tipoSugerido($hoje);
         $escalaHoje = $this->escalas->obter($tipoHoje, $hoje);
+        $outroTipo = $tipoHoje === 'preta' ? 'vermelha' : 'preta';
+        $escalaOutra = $this->escalas->obter($outroTipo, $hoje);
+        $temHoje = $escalaHoje && count($escalaHoje->postos) > 0;
+        $temOutra = $escalaOutra && count($escalaOutra->postos) > 0;
+        if (!$temHoje && $temOutra) {
+            $escalaHoje = $escalaOutra;
+            $tipoHoje = $outroTipo;
+        }
 
         View::render('dashboard/index', [
             'metricas'   => $metricas,

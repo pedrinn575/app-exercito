@@ -103,33 +103,68 @@ final class EscalaRepository
     }
 
     /**
-     * Onde a rotação parou até a véspera: início do último dia escalado
-     * mais quanta gente daquela função entrou nele.
+     * Escalas anteriores a $data, da mais recente para a mais antiga.
+     * A contagem é por função, para a fila continuar depois da véspera
+     * mesmo quando o dia tem preta e vermelha.
      *
-     * @return array{monitor:int,atirador:int}
+     * @return list<array{data_servico:string,inicio_monitor:string,inicio_atirador:string,usados_monitor:string,usados_atirador:string}>
      */
-    public function proximosInicios(string $data): array
+    public function escalasAnteriores(string $data, ?int $excetoId = null): array
     {
-        $stmt = $this->db->prepare(
-            "SELECT e.inicio_monitor, e.inicio_atirador,
+        $sql = "SELECT e.data_servico, e.inicio_monitor, e.inicio_atirador,
                     (SELECT COUNT(*) FROM escala_postos p
                       WHERE p.escala_id = e.id AND p.funcao = 'monitor')  AS usados_monitor,
                     (SELECT COUNT(*) FROM escala_postos p
                       WHERE p.escala_id = e.id AND p.funcao = 'atirador') AS usados_atirador
              FROM escalas e
-             WHERE e.data_servico < ?
-             ORDER BY e.data_servico DESC, e.id DESC
-             LIMIT 1"
+             WHERE e.data_servico < ?";
+        $params = [$data];
+        if ($excetoId !== null) {
+            $sql .= ' AND e.id != ?';
+            $params[] = $excetoId;
+        }
+        $sql .= ' ORDER BY e.data_servico DESC, e.id DESC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
+    /** @return list<string> */
+    public function datasComEscalaDepois(string $data): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT DISTINCT data_servico FROM escalas
+             WHERE data_servico > ?
+             ORDER BY data_servico'
         );
         $stmt->execute([$data]);
-        $row = $stmt->fetch();
-        if (!$row) {
-            return ['monitor' => 0, 'atirador' => 0];
+        return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /**
+     * O militar já tem serviço neste dia ou num dia anterior perto demais.
+     * A escala que está sendo montada não entra na conta.
+     */
+    public function servicoDentroDoIntervalo(int $usuarioId, string $data, int $horas, ?int $excetoEscalaId = null): bool
+    {
+        // Serviços caem em dias inteiros: 48h bloqueia o dia anterior e o mesmo dia.
+        $dias = (int) floor(($horas - 1) / 24);
+        $sql = "SELECT 1
+             FROM escala_postos ep
+             JOIN escalas e ON e.id = ep.escala_id
+             WHERE ep.usuario_id = ?
+               AND ep.status IN ('escalado', 'substituido')
+               AND e.data_servico >= date(?, '-{$dias} days')
+               AND e.data_servico <= ?";
+        $params = [$usuarioId, $data, $data];
+        if ($excetoEscalaId !== null) {
+            $sql .= ' AND e.id != ?';
+            $params[] = $excetoEscalaId;
         }
-        return [
-            'monitor'  => (int) $row['inicio_monitor'] + (int) $row['usados_monitor'],
-            'atirador' => (int) $row['inicio_atirador'] + (int) $row['usados_atirador'],
-        ];
+        $sql .= ' LIMIT 1';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (bool) $stmt->fetchColumn();
     }
 
     public function updateObservacao(int $escalaId, ?string $observacao): void
@@ -227,6 +262,26 @@ final class EscalaRepository
              ORDER BY e.data_servico'
         );
         $stmt->execute([$anoMes]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Dias do mês em que o militar está na escala.
+     *
+     * @return list<array{data_servico:string,tipo:string,funcao:string,status:string}>
+     */
+    public function diasDoUsuarioNoMes(int $usuarioId, string $anoMes): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT e.data_servico, e.tipo, ep.funcao, ep.status
+             FROM escala_postos ep
+             JOIN escalas e ON e.id = ep.escala_id
+             WHERE ep.usuario_id = ?
+               AND ep.status != \'substituido\'
+               AND strftime(\'%Y-%m\', e.data_servico) = ?
+             ORDER BY e.data_servico, e.tipo'
+        );
+        $stmt->execute([$usuarioId, $anoMes]);
         return $stmt->fetchAll();
     }
 

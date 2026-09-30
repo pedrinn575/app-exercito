@@ -120,11 +120,21 @@ final class EscalaController
 
         $data = $_GET['data'] ?? date('Y-m-d');
         $atual = $this->service->obter($tipo, $data);
+        $outroTipo = $tipo === 'preta' ? 'vermelha' : 'preta';
+        $outra = $this->service->obter($outroTipo, $data);
+
+        $temAtual = $atual && count($atual->postos) > 0;
+        $temOutra = $outra && count($outra->postos) > 0;
+        // Dia útil sugerido como preta, mas a escala gerada foi a vermelha (ou o inverso)
+        if (!$temAtual && $temOutra) {
+            View::redirect('/escalas/' . $outroTipo . '?data=' . urlencode($data));
+        }
 
         View::render('escalas/lista', [
             'tipo'      => $tipo,
             'escalas'   => $this->service->listar($tipo),
             'atual'     => $atual,
+            'outra'     => $temOutra ? $outra : null,
             'data'      => $data,
             'militares' => $this->usuarios->listar(),
             'efetivo'   => $this->service->efetivoPadrao(),

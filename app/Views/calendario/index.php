@@ -3,6 +3,7 @@
 /** @var array<string, list<array{tipo:string,total:int}>> $mapa */
 /** @var array<string, string> $tipos */
 /** @var array{monitores:int,atiradores:int} $efetivo */
+/** @var array<string, array{tipo:string,funcao:string}> $meusDias */
 /** @var list<array{id:int,data:string,nome:string}> $feriados */
 use App\Utils\Auth;
 use App\Utils\Calendar;
@@ -48,6 +49,26 @@ $semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   <?php endif; ?>
 </div>
 
+<?php if ($meusDias): ?>
+  <div class="mb-5 rounded-xl border-2 border-khaki-500 bg-khaki-200 px-4 py-4 shadow-panel">
+    <p class="font-display uppercase tracking-[0.14em] text-olive-950 text-sm sm:text-base">Seu dia de escala</p>
+    <p class="text-sm text-olive-800 mt-1">Estes são os dias em que você está na escala neste mês.</p>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <?php foreach ($meusDias as $dataMeu => $info): ?>
+        <a href="/escalas/<?= htmlspecialchars($info['tipo']) ?>?data=<?= urlencode($dataMeu) ?>"
+           class="inline-flex items-center gap-2 rounded-full bg-olive-950 text-khaki-100 px-3 py-1.5 text-sm font-display tracking-wide hover:bg-olive-800 transition">
+          <span><?= Calendar::formatBr($dataMeu) ?></span>
+          <span class="text-[10px] uppercase tracking-wider text-khaki-300"><?= $info['tipo'] === 'vermelha' ? 'Vermelha' : 'Preta' ?></span>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+<?php elseif (!Auth::isAdmin()): ?>
+  <div class="mb-5 rounded-xl border border-olive-200 bg-white/80 px-4 py-3 text-sm text-olive-700">
+    Você não está escalado em nenhum dia deste mês.
+  </div>
+<?php endif; ?>
+
 <div class="rounded-xl bg-white/80 border border-olive-200/80 shadow-panel p-2 sm:p-4 overflow-x-auto">
   <div class="grid grid-cols-7 gap-1.5 sm:gap-2 min-w-[560px] lg:min-w-[720px]">
     <?php foreach ($semana as $dia): ?>
@@ -60,20 +81,46 @@ $semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
     <?php for ($d = 1; $d <= $diasNoMes; $d++):
       $data = sprintf('%s-%02d', $mes, $d);
-      $tipo = $tipos[$data] ?? 'preta';
-      $vermelha = $tipo === 'vermelha';
-      $itens = $mapa[$data] ?? [];
+      $sugerido = $tipos[$data] ?? 'preta';
+      $itens = array_values(array_filter(
+          $mapa[$data] ?? [],
+          fn(array $item) => (int) $item['total'] > 0
+      ));
+      // O clique abre a escala que existe. A sugestão só vale se o dia ainda está vazio.
+      $destino = count($itens) === 1 ? $itens[0]['tipo'] : (count($itens) === 0 ? $sugerido : null);
+      $vermelha = $destino === 'vermelha' || ($destino === null && $sugerido === 'vermelha');
       $isHoje = $data === $hoje;
       $nomeFeriado = $feriadosPorData[$data] ?? null;
+      $meu = $meusDias[$data] ?? null;
+      if ($meu) {
+          $destino = $meu['tipo'];
+      }
+      $classeDia = 'rounded-lg border p-1.5 sm:p-2 flex flex-col transition hover:-translate-y-0.5 hover:shadow-md '
+          . ($meu
+              ? 'min-h-[104px] sm:min-h-[124px] bg-khaki-300 border-2 border-olive-950 ring-2 ring-khaki-500 shadow-md'
+              : ($destino === null
+                  ? 'min-h-[72px] sm:min-h-[96px] bg-gradient-to-br from-red-50/90 to-olive-50 border-red-200'
+                  : ('min-h-[72px] sm:min-h-[96px] ' . ($vermelha ? 'bg-red-50/80 border-red-200 hover:border-crimson-600' : 'bg-olive-50/70 border-olive-200 hover:border-olive-500'))))
+          . ($isHoje && !$meu ? ' ring-2 ring-khaki-500' : '');
     ?>
-      <a href="/escalas/<?= $tipo ?>?data=<?= $data ?>"
-         class="min-h-[72px] sm:min-h-[96px] rounded-lg border p-1.5 sm:p-2 flex flex-col transition hover:-translate-y-0.5 hover:shadow-md
-           <?= $vermelha ? 'bg-red-50/80 border-red-200 hover:border-crimson-600' : 'bg-olive-50/70 border-olive-200 hover:border-olive-500' ?>
-           <?= $isHoje ? 'ring-2 ring-khaki-500' : '' ?>">
-        <div class="flex items-start justify-between">
-          <span class="font-display text-base sm:text-lg leading-none <?= $vermelha ? 'text-crimson-700' : 'text-olive-900' ?>"><?= $d ?></span>
-          <span class="text-[9px] sm:text-[10px] uppercase tracking-wider <?= $vermelha ? 'text-crimson-600' : 'text-olive-600' ?>">
-            <?= $vermelha ? 'Verm' : 'Preta' ?>
+      <?php if ($destino !== null): ?>
+      <a href="/escalas/<?= $destino ?>?data=<?= $data ?>" class="<?= $classeDia ?>">
+      <?php else: ?>
+      <div class="<?= $classeDia ?>">
+      <?php endif; ?>
+        <?php if ($meu): ?>
+          <span class="mb-1 inline-block self-start max-w-full rounded bg-olive-950 px-1.5 py-1 text-[9px] sm:text-[10px] font-display uppercase tracking-wide text-khaki-200 leading-tight">
+            Seu dia de escala
+          </span>
+        <?php endif; ?>
+        <div class="flex items-start justify-between gap-1">
+          <span class="font-display text-base sm:text-lg leading-none <?= $meu ? 'text-olive-950' : ($vermelha || $destino === null ? 'text-crimson-700' : 'text-olive-900') ?>"><?= $d ?></span>
+          <span class="text-[9px] sm:text-[10px] uppercase tracking-wider text-right <?= $meu ? 'text-olive-900 font-semibold' : ($vermelha ? 'text-crimson-600' : 'text-olive-600') ?>">
+            <?php if ($destino === null): ?>
+              Preta e vermelha
+            <?php else: ?>
+              <?= $destino === 'vermelha' ? 'Verm' : 'Preta' ?>
+            <?php endif; ?>
           </span>
         </div>
         <?php if ($nomeFeriado): ?>
@@ -83,12 +130,23 @@ $semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
           <?php if (!$itens): ?>
             <p class="text-[9px] sm:text-[10px] text-olive-400">Sem escala</p>
           <?php else: foreach ($itens as $item): ?>
-            <p class="text-[10px] sm:text-[11px] font-medium <?= $item['tipo'] === 'vermelha' ? 'text-crimson-700' : 'text-olive-800' ?>">
-              <?= (int) $item['total'] ?> postos
-            </p>
+            <?php if ($destino === null): ?>
+              <a href="/escalas/<?= $item['tipo'] ?>?data=<?= $data ?>"
+                 class="block text-[10px] sm:text-[11px] font-medium underline-offset-2 hover:underline <?= $item['tipo'] === 'vermelha' ? 'text-crimson-700' : 'text-olive-800' ?>">
+                <?= $item['tipo'] === 'vermelha' ? 'Vermelha' : 'Preta' ?> · <?= (int) $item['total'] ?>
+              </a>
+            <?php else: ?>
+              <p class="text-[10px] sm:text-[11px] font-medium <?= $item['tipo'] === 'vermelha' ? 'text-crimson-700' : 'text-olive-800' ?>">
+                <?= (int) $item['total'] ?> postos
+              </p>
+            <?php endif; ?>
           <?php endforeach; endif; ?>
         </div>
+      <?php if ($destino !== null): ?>
       </a>
+      <?php else: ?>
+      </div>
+      <?php endif; ?>
     <?php endfor; ?>
   </div>
 </div>
@@ -99,7 +157,7 @@ $semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
     <ul class="mt-3 space-y-2 text-sm text-olive-200/90">
       <li>Você escolhe quantos monitores e atiradores entram por dia.</li>
       <li>Dia útil fica na preta. Sábado, domingo e feriado viram vermelha de 24h.</li>
-      <li>Cada cor tem a própria fila. O descanso de 48h vale para as duas.</li>
+      <li>A fila é uma só. Quem serviu não volta antes de completar as 48h.</li>
       <li>Para mudar um dia específico, abra a escala e edite posto a posto.</li>
     </ul>
   </article>

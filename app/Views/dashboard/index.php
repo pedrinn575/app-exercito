@@ -35,7 +35,7 @@ if (Auth::isAdmin()) {
     <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
       <div>
         <h3 class="font-display text-lg tracking-wide uppercase text-olive-900">Escala de hoje</h3>
-        <p class="text-sm text-olive-600"><?= Calendar::weekdayBr($metricas['hoje']) ?>, <?= Calendar::formatBr($metricas['hoje']) ?> · sugerida: <?= htmlspecialchars($tipoHoje) ?></p>
+        <p class="text-sm text-olive-600"><?= Calendar::weekdayBr($metricas['hoje']) ?>, <?= Calendar::formatBr($metricas['hoje']) ?> · <?= $tipoHoje === 'vermelha' ? 'escala vermelha' : 'escala preta' ?></p>
       </div>
       <div class="flex gap-2">
         <a href="/escalas/preta?data=<?= $metricas['hoje'] ?>" class="text-xs uppercase tracking-wider px-3 py-1.5 rounded bg-olive-800 text-olive-50 hover:bg-olive-900 transition">Preta</a>

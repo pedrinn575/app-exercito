@@ -2,6 +2,7 @@
 /** @var string $tipo */
 /** @var list<\App\Entities\Escala> $escalas */
 /** @var \App\Entities\Escala|null $atual */
+/** @var \App\Entities\Escala|null $outra */
 /** @var string $data */
 /** @var list<\App\Entities\Usuario> $militares */
 /** @var array{monitores:int,atiradores:int} $efetivo */
@@ -163,6 +164,14 @@ if ($atual) {
         <?php endif; ?>
       </span>
     </div>
+
+    <?php if (!empty($outra) && count($outra->postos) > 0): ?>
+      <a href="/escalas/<?= htmlspecialchars($outra->tipo) ?>?data=<?= urlencode($data) ?>"
+         class="block px-6 py-2.5 text-sm border-b <?= $outra->tipo === 'vermelha' ? 'bg-red-50 text-crimson-700' : 'bg-olive-50 text-olive-800' ?> hover:underline">
+        Este dia também tem escala <?= $outra->tipo === 'vermelha' ? 'vermelha' : 'preta' ?>
+        (<?= count($outra->postos) ?> postos). Abrir.
+      </a>
+    <?php endif; ?>
 
     <?php if (!$temEscala): ?>
       <div class="p-12 text-center text-olive-600">

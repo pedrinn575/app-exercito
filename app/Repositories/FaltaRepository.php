@@ -49,6 +49,39 @@ final class FaltaRepository
         return $stmt->fetchAll();
     }
 
+    /**
+     * Serviços de atirador em dias que já passaram.
+     * Sem falta registrada, conta como presença.
+     *
+     * @return list<array{id:int,numero:string,nome:string,data_servico:string,resultado:string}>
+     */
+    public function servicosPassadosAtirador(string $ate): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT u.id, u.numero, u.nome, e.data_servico,
+                    CASE
+                      WHEN EXISTS (
+                        SELECT 1 FROM faltas f
+                        WHERE f.escala_posto_id = ep.id AND f.tipo = 'injustificada'
+                      ) THEN 'injustificada'
+                      WHEN EXISTS (
+                        SELECT 1 FROM faltas f
+                        WHERE f.escala_posto_id = ep.id AND f.tipo = 'justificada'
+                      ) THEN 'justificada'
+                      ELSE 'presenca'
+                    END AS resultado
+             FROM escala_postos ep
+             JOIN usuarios u ON u.id = ep.usuario_id
+             JOIN escalas e ON e.id = ep.escala_id
+             WHERE u.perfil = 'atirador'
+               AND ep.funcao = 'atirador'
+               AND e.data_servico < ?
+             ORDER BY e.data_servico, CAST(u.numero AS INTEGER)"
+        );
+        $stmt->execute([$ate]);
+        return $stmt->fetchAll();
+    }
+
     public function countInjustificadasMes(string $anoMes): int
     {
         $stmt = $this->db->prepare(
