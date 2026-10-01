@@ -46,6 +46,11 @@ return [
         'rota'  => '/militares',
         'label' => 'Militares',
     ],
+    'atestados' => [
+        'rota'     => '/atestados',
+        'label'    => 'Atestados',
+        'so_admin' => true,
+    ],
     'relatorios' => [
         'rota'  => '/relatorios',
         'label' => 'Relatórios',

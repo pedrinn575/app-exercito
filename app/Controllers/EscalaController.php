@@ -15,6 +15,22 @@ final class EscalaController
         private UsuarioService $usuarios = new UsuarioService(),
     ) {}
 
+    public function imprimir(): void
+    {
+        Auth::requireAdmin();
+        try {
+            $data = (string) ($_GET['data'] ?? date('Y-m-d'));
+            $modo = (string) ($_GET['modo'] ?? 'dia');
+            $folha = $this->service->folhaImpressao($modo, $data);
+            View::render('escalas/imprimir', [
+                'folha' => $folha,
+                'pageTitle' => 'Previsão da escala de serviço',
+            ], 'layouts/documento');
+        } catch (HttpException $e) {
+            View::redirect('/calendario', null, $e->getMessage());
+        }
+    }
+
     public function preta(): void
     {
         $this->mostrar('preta', 'Escala Preta');
@@ -42,11 +58,14 @@ final class EscalaController
             [$monitores, $atiradores] = $this->efetivoDoPost();
             $refazer = !empty($_POST['refazer']);
 
+            $inicioAtirador = trim((string) ($_POST['inicio_atirador'] ?? ''));
+            $inicioAtirador = $inicioAtirador !== '' ? $inicioAtirador : null;
+
             if ($refazer) {
-                $this->service->regerar($tipo, $data, (int) $user['id'], $monitores, $atiradores);
+                $this->service->regerar($tipo, $data, (int) $user['id'], $monitores, $atiradores, true, $inicioAtirador);
                 $msg = 'Escala ' . $tipo . ' refeita para ' . Calendar::formatBr($data) . '.';
             } else {
-                $this->service->gerar($tipo, $data, (int) $user['id'], $monitores, $atiradores);
+                $this->service->gerar($tipo, $data, (int) $user['id'], $monitores, $atiradores, true, $inicioAtirador);
                 $msg = 'Escala ' . $tipo . ' gerada para ' . Calendar::formatBr($data) . '.';
             }
 

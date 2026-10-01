@@ -1,0 +1,12 @@
+Atualizacao da fila da escala.
+
+Envie a pasta app por cima da pasta app que ja esta no site.
+Nao substitua a pasta storage nem o arquivo do banco.
+
+Arquivos:
+- app/Services/EscalaService.php
+- app/Repositories/EscalaRepository.php
+- app/Controllers/CalendarioController.php
+- app/Views/calendario/index.php
+
+Se o dia 30 e o dia 1 ja estiverem iguais, abra o dia 30 e use Refazer.

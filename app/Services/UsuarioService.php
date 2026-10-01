@@ -47,6 +47,9 @@ final class UsuarioService
             email: $dto->email,
             senhaHash: password_hash($senha, PASSWORD_BCRYPT),
             perfil: $dto->perfil,
+            atestado: $dto->atestado,
+            atestadoInicio: $dto->atestado ? $dto->atestadoInicio : null,
+            atestadoDias: $dto->atestado ? $dto->atestadoDias : null,
         );
         return $this->repo->create($entity);
     }
@@ -65,6 +68,9 @@ final class UsuarioService
         $atual->numeroMonitor = $dto->numeroMonitor;
         $atual->email = $dto->email;
         $atual->perfil = $dto->perfil;
+        $atual->atestado = $dto->atestado;
+        $atual->atestadoInicio = $dto->atestado ? $dto->atestadoInicio : null;
+        $atual->atestadoDias = $dto->atestado ? $dto->atestadoDias : null;
         $this->repo->update($atual);
 
         if ($dto->senha) {
@@ -81,6 +87,50 @@ final class UsuarioService
         if ($outro && $outro->id !== $excetoId) {
             throw new ValidationException('Número de monitor já em uso.');
         }
+    }
+
+    /** @return list<Usuario> */
+    public function listarAtestados(): array
+    {
+        return $this->repo->comAtestado();
+    }
+
+    /** @return list<Usuario> */
+    public function listarElegiveisAtestado(): array
+    {
+        return array_values(array_filter(
+            $this->repo->all(),
+            fn(Usuario $u) => $u->perfil !== 'admin' && !$u->atestadoAberto()
+        ));
+    }
+
+    public function definirAtestado(int $id, bool $atestado, ?string $inicio = null, ?int $dias = null): void
+    {
+        $usuario = $this->buscar($id);
+        if ($usuario->perfil === 'admin') {
+            throw new ValidationException('Administrador não entra na escala.');
+        }
+        if (!$atestado) {
+            $usuario->atestado = false;
+            $usuario->atestadoInicio = null;
+            $usuario->atestadoDias = null;
+            $this->repo->update($usuario);
+            return;
+        }
+
+        $inicio = trim((string) $inicio) ?: date('Y-m-d');
+        $dias = (int) $dias;
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $inicio)) {
+            throw new ValidationException('Informe o início do atestado.');
+        }
+        if ($dias < 1 || $dias > 365) {
+            throw new ValidationException('A quantidade de dias do atestado deve ficar entre 1 e 365.');
+        }
+
+        $usuario->atestado = true;
+        $usuario->atestadoInicio = $inicio;
+        $usuario->atestadoDias = $dias;
+        $this->repo->update($usuario);
     }
 
     public function desativar(int $id): void

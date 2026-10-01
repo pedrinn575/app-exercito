@@ -61,8 +61,10 @@ final class CalendarioController
             $monitores = ($_POST['monitores'] ?? '') !== '' ? (int) $_POST['monitores'] : null;
             $atiradores = ($_POST['atiradores'] ?? '') !== '' ? (int) $_POST['atiradores'] : null;
             $substituir = !empty($_POST['substituir']);
+            $inicioAtirador = trim((string) ($_POST['inicio_atirador'] ?? ''));
+            $inicioAtirador = $inicioAtirador !== '' ? $inicioAtirador : null;
 
-            $r = $this->escalas->gerarMes($mes, (int) $user['id'], $monitores, $atiradores, $substituir);
+            $r = $this->escalas->gerarMes($mes, (int) $user['id'], $monitores, $atiradores, $substituir, $inicioAtirador);
 
             $msg = $r['criadas'] . ' escala(s) gerada(s)';
             if ($r['refeitas'] > 0) {

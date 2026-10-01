@@ -33,6 +33,22 @@ $edit = $militar !== null;
              placeholder="Só para monitor">
       <span class="block text-[11px] text-olive-500 mt-1">Na escala de monitor vale este número, do último ao primeiro.</span>
     </div>
+    <label class="flex items-center gap-2 text-sm text-olive-800">
+      <input type="checkbox" name="atestado" value="1" class="rounded" <?= !empty($militar) && $militar->atestadoAberto() ? 'checked' : '' ?>>
+      De atestado (não entra no serviço nesse período)
+    </label>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-olive-700 mb-1">Início do atestado</label>
+        <input type="date" name="atestado_inicio" value="<?= htmlspecialchars($militar?->atestadoInicio ?? date('Y-m-d')) ?>"
+               class="w-full rounded-md border border-olive-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-olive-400/30">
+      </div>
+      <div>
+        <label class="block text-xs uppercase tracking-wider text-olive-700 mb-1">Dias</label>
+        <input type="number" name="atestado_dias" min="1" max="365" value="<?= (int) ($militar?->atestadoDias ?? 1) ?>"
+               class="w-full rounded-md border border-olive-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-olive-400/30">
+      </div>
+    </div>
     <div>
       <label class="block text-xs uppercase tracking-wider text-olive-700 mb-1">E-mail</label>
       <input name="email" type="email" value="<?= htmlspecialchars($militar->email ?? '') ?>"

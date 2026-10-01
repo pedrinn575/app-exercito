@@ -1,0 +1,8 @@
+RewriteEngine On
+
+# Código, migrações e banco não podem ser baixados pelo navegador.
+RewriteRule ^(app|database|storage)(/|$) - [F,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

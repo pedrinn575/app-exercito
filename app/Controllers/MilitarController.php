@@ -65,6 +65,43 @@ final class MilitarController
         }
     }
 
+    public function atestados(): void
+    {
+        Auth::requireAdmin();
+        View::render('atestados/index', [
+            'atestados' => $this->service->listarAtestados(),
+            'elegiveis' => $this->service->listarElegiveisAtestado(),
+            'pageTitle' => 'Atestados',
+        ]);
+    }
+
+    public function marcarAtestado(): void
+    {
+        Auth::requireAdmin();
+        try {
+            $this->service->definirAtestado(
+                (int) ($_POST['usuario_id'] ?? 0),
+                true,
+                (string) ($_POST['inicio'] ?? ''),
+                (int) ($_POST['dias'] ?? 0)
+            );
+            View::redirect('/atestados', 'Militar colocado de atestado. Ele fica fora da escala até o fim do prazo.');
+        } catch (HttpException $e) {
+            View::redirect('/atestados', null, $e->getMessage());
+        }
+    }
+
+    public function tirarAtestado(string $id): void
+    {
+        Auth::requireAdmin();
+        try {
+            $this->service->definirAtestado((int) $id, false);
+            View::redirect('/atestados', 'Atestado removido. O militar volta para a fila.');
+        } catch (HttpException $e) {
+            View::redirect('/atestados', null, $e->getMessage());
+        }
+    }
+
     public function destroy(string $id): void
     {
         Auth::requireAdmin();

@@ -38,12 +38,31 @@ $semana = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
         <input type="number" name="atiradores" min="0" max="150" value="<?= (int) $efetivo['atiradores'] ?>"
                class="w-24 rounded-md border border-olive-300 px-3 py-2 text-sm">
       </label>
+      <label class="block">
+        <span class="block text-[10px] uppercase tracking-widest text-olive-600 mb-1">Começar pelo nº</span>
+        <input type="text" name="inicio_atirador" inputmode="numeric" placeholder="Fila"
+               class="w-24 rounded-md border border-olive-300 px-3 py-2 text-sm">
+      </label>
       <label class="flex items-center gap-2 text-xs text-olive-700 pb-2.5">
         <input type="checkbox" name="substituir" value="1" class="rounded">
         Refazer dias já gerados
       </label>
       <button class="font-display tracking-wider uppercase text-sm px-4 py-2.5 rounded-md bg-olive-800 text-olive-50 hover:bg-olive-900 transition">
         Gerar mês
+      </button>
+    </form>
+    <form method="get" action="/escalas/imprimir" target="_blank" class="flex flex-wrap items-end gap-3 rounded-xl bg-white/80 border border-olive-200/80 p-3 shadow-panel">
+      <input type="hidden" name="data" value="<?= htmlspecialchars($mes) ?>-01">
+      <label class="block">
+        <span class="block text-[10px] uppercase tracking-widest text-olive-600 mb-1">Previsão</span>
+        <select name="modo" class="rounded-md border border-olive-300 px-3 py-2 text-sm">
+          <option value="mes">Do mês</option>
+          <option value="semana">Da semana</option>
+          <option value="dia">Do dia 1</option>
+        </select>
+      </label>
+      <button class="font-display tracking-wider uppercase text-sm px-4 py-2.5 rounded-md bg-olive-800 text-olive-50 hover:bg-olive-900 transition">
+        Gerar PDF
       </button>
     </form>
   <?php endif; ?>

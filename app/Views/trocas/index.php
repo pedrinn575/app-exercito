@@ -25,8 +25,9 @@ $statusBadge = [
 <div class="<?= $admin ? '' : 'grid lg:grid-cols-[360px_1fr] gap-6' ?>">
   <?php if (!$admin): ?>
   <aside class="rounded-xl bg-white/80 border border-olive-200/80 p-5 shadow-panel h-fit">
+    <?php $souMonitor = (Auth::user()['perfil'] ?? '') === 'monitor'; ?>
     <h3 class="font-display uppercase tracking-wide text-olive-900">Pedir troca</h3>
-    <p class="text-xs text-olive-600 mt-1">Informe seu serviço e o número do atirador. Ele aceita; o Subtenente aprova.</p>
+    <p class="text-xs text-olive-600 mt-1">Informe seu serviço e o número do <?= $souMonitor ? 'monitor' : 'atirador' ?>. Ele aceita; o Subtenente aprova.</p>
 
     <?php if (!$meusPostos): ?>
       <p class="mt-4 text-sm text-olive-500">Você não possui serviços futuros escalados.</p>
@@ -45,6 +46,8 @@ $statusBadge = [
           <select name="destino_id" required class="w-full rounded-md border border-olive-300 px-3 py-2 text-sm">
             <?php foreach ($militares as $m):
               if ($m->perfil === 'admin') continue;
+              if ($souMonitor && $m->perfil !== 'monitor') continue;
+              if (!$souMonitor && $m->perfil === 'monitor') continue;
             ?>
               <option value="<?= (int)$m->id ?>"><?= htmlspecialchars($m->numero . ' · ' . $m->nome) ?></option>
             <?php endforeach; ?>

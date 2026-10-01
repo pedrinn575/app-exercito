@@ -41,11 +41,7 @@ $pendentes = array_values(array_filter($pedidos, fn($p) => in_array($p['status']
             <option value="ambos">Almoço e jantar</option>
           </select>
         </div>
-        <div>
-          <label class="block text-xs uppercase tracking-wider text-olive-700 mb-1">Quantidade</label>
-          <input type="number" name="quantidade" min="1" max="5" value="1" required
-                 class="w-full rounded-md border border-olive-300 px-3 py-2 text-sm">
-        </div>
+        <p class="text-xs text-olive-600">Almoço ou jantar conta 1 marmita. Os dois contam 2.</p>
         <div>
           <label class="block text-xs uppercase tracking-wider text-olive-700 mb-1">Observação</label>
           <textarea name="observacao" rows="2" class="w-full rounded-md border border-olive-300 px-3 py-2 text-sm" placeholder="Ex.: serviço de 24h"></textarea>
@@ -66,6 +62,19 @@ $pendentes = array_values(array_filter($pedidos, fn($p) => in_array($p['status']
         </div>
         <p class="font-display text-4xl"><?= count($pendentes) ?></p>
       </section>
+      <form method="get" action="/marmitas/imprimir" target="_blank" class="rounded-xl bg-white/80 border border-olive-200/80 p-4 shadow-panel flex flex-wrap items-end gap-3">
+        <label class="block">
+          <span class="block text-[10px] uppercase tracking-widest text-olive-600 mb-1">A partir de</span>
+          <input type="date" name="inicio" value="<?= htmlspecialchars(date('Y-m-d')) ?>" required class="rounded-md border border-olive-300 px-3 py-2 text-sm">
+        </label>
+        <label class="block">
+          <span class="block text-[10px] uppercase tracking-widest text-olive-600 mb-1">Dias</span>
+          <input type="number" name="dias" min="1" max="7" value="7" required class="w-20 rounded-md border border-olive-300 px-3 py-2 text-sm">
+        </label>
+        <button class="font-display tracking-wider uppercase text-sm px-4 py-2.5 rounded-md bg-olive-800 text-olive-50 hover:bg-olive-900 transition">
+          Imprimir PDF
+        </button>
+      </form>
     <?php endif; ?>
 
     <section class="rounded-xl bg-white/80 border border-olive-200/80 shadow-panel overflow-hidden">
@@ -150,8 +159,7 @@ $pendentes = array_values(array_filter($pedidos, fn($p) => in_array($p['status']
                                 <option value="<?= $valor ?>" <?= $p['refeicao'] === $valor ? 'selected' : '' ?>><?= $texto ?></option>
                               <?php endforeach; ?>
                             </select>
-                            <input type="number" name="quantidade" min="1" max="5" value="<?= (int) $p['quantidade'] ?>"
-                                   class="w-full text-sm border border-olive-300 rounded px-2 py-1.5">
+                            <p class="text-[11px] text-olive-500">Almoço ou jantar: 1. Os dois: 2.</p>
                             <textarea name="observacao" rows="2" class="w-full text-sm border border-olive-300 rounded px-2 py-1.5"><?= htmlspecialchars($p['observacao'] ?? '') ?></textarea>
                             <button class="w-full text-xs py-1.5 rounded bg-olive-800 text-white hover:bg-olive-900">Reenviar</button>
                           </form>

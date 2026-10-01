@@ -11,12 +11,14 @@ use App\Exceptions\UnauthorizedException;
 use App\Exceptions\ValidationException;
 use App\Repositories\EscalaRepository;
 use App\Repositories\TrocaRepository;
+use App\Repositories\UsuarioRepository;
 
 final class TrocaService
 {
     public function __construct(
         private TrocaRepository $trocas = new TrocaRepository(),
         private EscalaRepository $escalas = new EscalaRepository(),
+        private UsuarioRepository $usuarios = new UsuarioRepository(),
     ) {}
 
     public function solicitar(TrocaDTO $dto): int
@@ -32,6 +34,17 @@ final class TrocaService
             throw new ValidationException('Este posto não está disponível para troca.');
         }
 
+        $solicitante = $this->usuarios->findById($dto->solicitanteId);
+        $destino = $this->usuarios->findById($dto->destinoId);
+        if (!$solicitante || !$destino) {
+            throw new NotFoundException('Militar não encontrado.');
+        }
+        $envolveMonitor = $solicitante->perfil === 'monitor' || $destino->perfil === 'monitor';
+        $monitorComMonitor = $solicitante->perfil === 'monitor' && $destino->perfil === 'monitor';
+        if ($envolveMonitor && !$monitorComMonitor) {
+            throw new ValidationException('Monitor só pode trocar com monitor.');
+        }
+
         return $this->trocas->create(
             $dto->escalaPostoId,
             $dto->solicitanteId,
@@ -44,7 +57,7 @@ final class TrocaService
     {
         $t = $this->requireTroca($trocaId);
         if ((int) $t['destino_id'] !== $userId) {
-            throw new UnauthorizedException('Apenas o atirador de destino pode aceitar.');
+            throw new UnauthorizedException('Apenas o militar de destino pode aceitar.');
         }
         if ($t['status'] !== 'pendente') {
             throw new ValidationException('Troca não está pendente.');
@@ -68,7 +81,7 @@ final class TrocaService
         }
 
         // Efetiva: troca o usuário do posto, só neste dia
-        $this->escalas->updatePostoUsuario((int) $t['escala_posto_id'], (int) $t['destino_id']);
+        $this->escalas->updatePostoUsuario((int) $t['escala_posto_id'], (int) $t['destino_id'], true);
         $this->trocas->updateStatus($trocaId, 'aprovado');
     }
 

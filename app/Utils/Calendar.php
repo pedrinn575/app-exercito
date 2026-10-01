@@ -37,6 +37,41 @@ final class Calendar
         return date('d/m/Y', strtotime($dateYmd));
     }
 
+    public static function weekdayShort(string $dateYmd): string
+    {
+        $map = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
+        return $map[(int) date('N', strtotime($dateYmd)) - 1] ?? '';
+    }
+
+    /** Cabeçalho do dia na previsão: "28 SETEMBRO" ou "1º OUTUBRO". */
+    public static function diaDocumento(string $dateYmd): string
+    {
+        $ts = strtotime($dateYmd);
+        $dia = (int) date('j', $ts);
+        $numero = $dia === 1 ? '1º' : ($dia < 10 ? sprintf('%02d', $dia) : (string) $dia);
+        $meses = [
+            1 => 'JANEIRO', 2 => 'FEVEREIRO', 3 => 'MARÇO', 4 => 'ABRIL',
+            5 => 'MAIO', 6 => 'JUNHO', 7 => 'JULHO', 8 => 'AGOSTO',
+            9 => 'SETEMBRO', 10 => 'OUTUBRO', 11 => 'NOVEMBRO', 12 => 'DEZEMBRO',
+        ];
+
+        return $numero . ' ' . ($meses[(int) date('n', $ts)] ?? '');
+    }
+
+    public static function dataExtenso(string $dateYmd): string
+    {
+        $ts = strtotime($dateYmd);
+        $dia = (int) date('j', $ts);
+        $numero = $dia === 1 ? '1º' : (string) $dia;
+        $meses = [
+            1 => 'janeiro', 2 => 'fevereiro', 3 => 'março', 4 => 'abril',
+            5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
+            9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro',
+        ];
+
+        return $numero . ' de ' . ($meses[(int) date('n', $ts)] ?? '') . ' de ' . date('Y', $ts);
+    }
+
     public static function weekdayBr(string $dateYmd): string
     {
         $map = [

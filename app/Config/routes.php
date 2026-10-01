@@ -32,6 +32,7 @@ $router->post('/feriados', [CalendarioController::class, 'salvarFeriado']);
 $router->post('/feriados/{id}/remover', [CalendarioController::class, 'removerFeriado']);
 
 $router->get('/marmitas', [MarmitaController::class, 'index']);
+$router->get('/marmitas/imprimir', [MarmitaController::class, 'imprimir']);
 $router->post('/marmitas', [MarmitaController::class, 'store']);
 $router->post('/marmitas/{id}/atualizar', [MarmitaController::class, 'atualizar']);
 $router->post('/marmitas/{id}/aprovar', [MarmitaController::class, 'aprovar']);
@@ -45,7 +46,11 @@ $router->post('/militares', [MilitarController::class, 'store']);
 $router->get('/militares/{id}/editar', [MilitarController::class, 'edit']);
 $router->post('/militares/{id}', [MilitarController::class, 'update']);
 $router->post('/militares/{id}/desativar', [MilitarController::class, 'destroy']);
+$router->get('/atestados', [MilitarController::class, 'atestados']);
+$router->post('/atestados', [MilitarController::class, 'marcarAtestado']);
+$router->post('/atestados/{id}/tirar', [MilitarController::class, 'tirarAtestado']);
 
+$router->get('/escalas/imprimir', [EscalaController::class, 'imprimir']);
 $router->get('/escalas/preta', [EscalaController::class, 'preta']);
 $router->get('/escalas/vermelha', [EscalaController::class, 'vermelha']);
 $router->post('/escalas/gerar', [EscalaController::class, 'gerar']);

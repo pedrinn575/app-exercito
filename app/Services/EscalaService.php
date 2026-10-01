@@ -74,7 +74,8 @@ final class EscalaService
         int $adminId,
         ?int $qtdMonitores = null,
         ?int $qtdAtiradores = null,
-        bool $propagar = true
+        bool $propagar = true,
+        ?string $numeroInicioAtirador = null
     ): Escala {
         $this->assertTipo($tipo);
 
@@ -111,6 +112,9 @@ final class EscalaService
         // Continua depois da véspera. Refazer também recalcula, senão o dia
         // seguinte fica com a mesma turma.
         $inicios = $this->proximosInicios($data, $escalaId);
+        if ($numeroInicioAtirador !== null && $numeroInicioAtirador !== '') {
+            $inicios['atirador'] = $this->indiceDoAtirador($numeroInicioAtirador);
+        }
         $monitores = $this->preencher($escalaId, 'monitor', $qtdMonitores, $inicios['monitor'], $data);
         $atiradores = $this->preencher($escalaId, 'atirador', $qtdAtiradores, $inicios['atirador'], $data);
         $this->escalas->updateInicios($escalaId, $monitores['inicio'], $atiradores['inicio']);
@@ -193,6 +197,9 @@ final class EscalaService
             if (isset($escolhidos[$id]) || isset($semFolgaNaFila[$id])) {
                 continue;
             }
+            if ($militar->emAtestadoEm($data)) {
+                continue;
+            }
             if ($this->escalas->servicoDentroDoIntervalo($id, $data, $this->intervaloHoras, $escalaId)) {
                 $semFolgaNaFila[$id] = $abs;
                 continue;
@@ -240,6 +247,20 @@ final class EscalaService
     private function fila(string $funcao): array
     {
         return $this->usuarios->filaDaFuncao($funcao, $funcao === 'monitor');
+    }
+
+    private function indiceDoAtirador(string $numero): int
+    {
+        $alvo = (int) $numero;
+        if ($alvo <= 0) {
+            throw new ValidationException('Informe o número do atirador que começa a escala.');
+        }
+        foreach ($this->fila('atirador') as $indice => $militar) {
+            if ((int) $militar->numero === $alvo) {
+                return $indice;
+            }
+        }
+        throw new ValidationException('Não há atirador ativo com o número ' . $numero . '.');
     }
 
     /**
@@ -328,7 +349,8 @@ final class EscalaService
         int $adminId,
         ?int $qtdMonitores = null,
         ?int $qtdAtiradores = null,
-        bool $substituir = false
+        bool $substituir = false,
+        ?string $numeroInicioAtirador = null
     ): array {
         if (!preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
             throw new ValidationException('Mês inválido.');
@@ -339,6 +361,8 @@ final class EscalaService
         $criadas = 0;
         $puladas = 0;
         $refeitas = 0;
+        $inicioInformado = $numeroInicioAtirador;
+        $ancora = null;
 
         for ($data = $inicio; $data <= $fim; $data = date('Y-m-d', strtotime($data . ' +1 day'))) {
             $tipo = $this->tipoSugerido($data);
@@ -355,10 +379,12 @@ final class EscalaService
                 $criadas++;
             }
 
-            $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores, false);
+            $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores, false, $inicioInformado);
+            $ancora ??= $data;
+            $inicioInformado = null;
         }
 
-        $this->reposicionarSeguintes($inicio, $adminId);
+        $this->reposicionarSeguintes($ancora ?? $inicio, $adminId);
 
         return ['criadas' => $criadas, 'puladas' => $puladas, 'refeitas' => $refeitas];
     }
@@ -372,7 +398,8 @@ final class EscalaService
         int $adminId,
         ?int $qtdMonitores = null,
         ?int $qtdAtiradores = null,
-        bool $propagar = true
+        bool $propagar = true,
+        ?string $numeroInicioAtirador = null
     ): Escala {
         $this->assertTipo($tipo);
         $existente = $this->escalas->findByTipoData($tipo, $data);
@@ -381,7 +408,7 @@ final class EscalaService
             $this->escalas->updateObservacao((int) $existente->id, null);
         }
 
-        return $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores, $propagar);
+        return $this->gerar($tipo, $data, $adminId, $qtdMonitores, $qtdAtiradores, $propagar, $numeroInicioAtirador);
     }
 
     /**
@@ -402,6 +429,9 @@ final class EscalaService
         $usuario = $this->usuarios->findById($usuarioId);
         if (!$usuario) {
             throw new NotFoundException('Militar não encontrado.');
+        }
+        if ($usuario->emAtestadoEm($escala->dataServico)) {
+            throw new ValidationException('Este militar está de atestado nessa data e não entra no serviço.');
         }
 
         $this->escalas->addPosto($escalaId, $usuarioId, $funcao);
@@ -493,6 +523,119 @@ final class EscalaService
     public function doUsuario(int $usuarioId): array
     {
         return $this->escalas->postosDoUsuario($usuarioId);
+    }
+
+    /**
+     * Folha da previsão no modelo do TG: dia, semana (segunda a domingo) ou mês em blocos de 7 dias.
+     *
+     * @return array{modo:string,blocos:list<list<array{data:string,cmt:?string,cb:?string,sentinelas:list<string>}>>}
+     */
+    public function folhaImpressao(string $modo, string $data): array
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
+            throw new ValidationException('Informe a data da escala.');
+        }
+
+        $blocos = match ($modo) {
+            'dia' => [[$data]],
+            'semana' => [$this->diasDaSemana($data)],
+            'mes' => $this->semanasDoMes($data),
+            default => throw new ValidationException('Escolha dia, semana ou mês.'),
+        };
+
+        $folhas = [];
+        foreach ($blocos as $dias) {
+            $bloco = [];
+            foreach ($dias as $dia) {
+                $bloco[] = $this->colunaDaPrevisao($dia);
+            }
+            $folhas[] = $bloco;
+        }
+
+        return ['modo' => $modo, 'blocos' => $folhas];
+    }
+
+    /** @return list<string> */
+    private function diasDaSemana(string $data): array
+    {
+        $segunda = date('Y-m-d', strtotime($data . ' -' . ((int) date('N', strtotime($data)) - 1) . ' days'));
+        $dias = [];
+        for ($i = 0; $i < 7; $i++) {
+            $dias[] = date('Y-m-d', strtotime($segunda . ' +' . $i . ' days'));
+        }
+        return $dias;
+    }
+
+    /** @return list<list<string>> */
+    private function semanasDoMes(string $data): array
+    {
+        $inicio = date('Y-m-01', strtotime($data));
+        $fim = date('Y-m-t', strtotime($inicio));
+        $dias = [];
+        for ($dia = $inicio; $dia <= $fim; $dia = date('Y-m-d', strtotime($dia . ' +1 day'))) {
+            $dias[] = $dia;
+        }
+
+        return array_chunk($dias, 7);
+    }
+
+    /** @return array{data:string,cmt:?string,cb:?string,sentinelas:list<string>} */
+    private function colunaDaPrevisao(string $data): array
+    {
+        $escala = $this->escalaImpressa($data);
+        $monitores = [];
+        $sentinelas = [];
+        foreach ($escala?->postos ?? [] as $posto) {
+            if (($posto['status'] ?? '') === 'substituido' || ($posto['funcao'] ?? '') === 'reserva') {
+                continue;
+            }
+            $linha = $this->linhaDaPrevisao($posto);
+            if (($posto['funcao'] ?? '') === 'monitor') {
+                $monitores[] = ['id' => (int) $posto['id'], 'linha' => $linha];
+            } else {
+                $sentinelas[] = $linha;
+            }
+        }
+        usort($monitores, fn(array $a, array $b) => $a['id'] <=> $b['id']);
+        $linhasMonitor = array_column($monitores, 'linha');
+
+        return [
+            'data' => $data,
+            'cmt' => $linhasMonitor[0] ?? null,
+            'cb' => $linhasMonitor[1] ?? null,
+            'sentinelas' => array_merge($sentinelas, array_slice($linhasMonitor, 2)),
+        ];
+    }
+
+    private function escalaImpressa(string $data): ?Escala
+    {
+        $sugerida = $this->tipoSugerido($data);
+        $outra = $sugerida === 'preta' ? 'vermelha' : 'preta';
+        foreach ([$sugerida, $outra] as $tipo) {
+            $escala = $this->escalas->findByTipoData($tipo, $data);
+            if ($escala && $escala->postos !== []) {
+                return $escala;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param array<string,mixed> $posto */
+    private function linhaDaPrevisao(array $posto): string
+    {
+        $nome = trim((string) ($posto['nome'] ?? ''));
+        if (preg_match('/\.\s+(.+)$/u', $nome, $m)) {
+            $sobrenome = $m[1];
+        } else {
+            $partes = preg_split('/\s+/u', $nome) ?: [];
+            $sobrenome = count($partes) >= 2 ? implode(' ', array_slice($partes, -2)) : $nome;
+        }
+        $sobrenome = function_exists('mb_strtoupper')
+            ? mb_strtoupper($sobrenome, 'UTF-8')
+            : strtoupper($sobrenome);
+
+        return (int) ($posto['numero'] ?? 0) . ' – ' . $sobrenome;
     }
 
     private function assertTipo(string $tipo): void

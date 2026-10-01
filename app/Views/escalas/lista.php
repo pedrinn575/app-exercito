@@ -57,6 +57,21 @@ if ($atual) {
     </div>
 
     <?php if ($admin): ?>
+    <form method="get" action="/escalas/imprimir" target="_blank" class="rounded-xl bg-white/80 border border-olive-200/80 p-5 shadow-panel space-y-3">
+      <h3 class="font-display uppercase tracking-wide text-olive-900 text-sm">Previsão em PDF</h3>
+      <input type="hidden" name="data" value="<?= htmlspecialchars($data) ?>">
+      <select name="modo" class="w-full rounded-md border border-olive-300 px-3 py-2 text-sm">
+        <option value="dia">Do dia</option>
+        <option value="semana">Da semana</option>
+        <option value="mes">Do mês</option>
+      </select>
+      <button class="w-full rounded-md bg-olive-800 text-olive-50 py-2 text-sm font-display tracking-wider uppercase hover:bg-olive-900 transition">
+        Gerar PDF
+      </button>
+    </form>
+    <?php endif; ?>
+
+    <?php if ($admin): ?>
     <div class="rounded-xl <?= $isVermelha ? 'bg-crimson-700' : 'bg-olive-900' ?> text-white p-5 shadow-panel">
       <h3 class="font-display uppercase tracking-wide"><?= $temEscala ? 'Refazer escala' : 'Gerar escala' ?></h3>
       <p class="text-sm opacity-80 mt-1">Escolha o efetivo do dia. A rotação respeita as 48h.</p>
@@ -78,6 +93,11 @@ if ($atual) {
                    class="w-full rounded-md border-0 px-3 py-2 text-sm text-olive-900">
           </label>
         </div>
+        <label class="block">
+          <span class="block text-[10px] uppercase tracking-widest opacity-80 mb-1">Começar pelo atirador</span>
+          <input type="text" name="inicio_atirador" inputmode="numeric" placeholder="Vazio segue a fila"
+                 class="w-full rounded-md border-0 px-3 py-2 text-sm text-olive-900">
+        </label>
         <?php if ($temEscala): ?>
           <label class="flex items-center gap-2 text-xs opacity-90">
             <input type="checkbox" name="refazer" value="1" checked class="rounded">
@@ -109,7 +129,7 @@ if ($atual) {
           <input type="hidden" name="data" value="<?= htmlspecialchars($data) ?>">
           <select name="usuario_id" required class="w-full rounded-md border border-olive-300 px-3 py-2 text-sm">
             <?php foreach ($militares as $m):
-              if ($m->perfil === 'admin' || isset($jaEscalados[(int) $m->id])) continue;
+              if ($m->perfil === 'admin' || $m->emAtestadoEm($data) || isset($jaEscalados[(int) $m->id])) continue;
             ?>
               <option value="<?= (int) $m->id ?>"><?= htmlspecialchars($rotuloMilitar($m)) ?></option>
             <?php endforeach; ?>
@@ -222,6 +242,11 @@ if ($atual) {
                     <?= $injust ? 'bg-red-100 text-crimson-700' : ($just ? 'bg-amber-100 text-amber-800' : 'bg-olive-100 text-olive-700') ?>">
                     <?= str_replace('_', ' ', htmlspecialchars($p['status'])) ?>
                   </span>
+                  <?php if (!empty($p['trocado'])): ?>
+                    <span class="ml-1 text-xs px-2 py-0.5 rounded bg-khaki-200 text-olive-900">Trocado</span>
+                  <?php else: ?>
+                    <span class="ml-1 text-xs px-2 py-0.5 rounded bg-olive-50 text-olive-500">Não trocado</span>
+                  <?php endif; ?>
                 </td>
                 <?php if ($admin): ?>
                   <td class="px-6 py-3">

@@ -29,6 +29,22 @@ final class MarmitaController
         ]);
     }
 
+    public function imprimir(): void
+    {
+        Auth::requireAdmin();
+        try {
+            $inicio = (string) ($_GET['inicio'] ?? date('Y-m-d'));
+            $dias = (int) ($_GET['dias'] ?? 7);
+            $folha = $this->service->paraImpressao($inicio, $dias);
+            View::render('marmitas/imprimir', [
+                'folha'     => $folha,
+                'pageTitle' => 'Marmitas',
+            ], 'layouts/print');
+        } catch (HttpException $e) {
+            View::redirect('/marmitas', null, $e->getMessage());
+        }
+    }
+
     public function store(): void
     {
         $user = Auth::requireLogin();

@@ -48,6 +48,39 @@ final class MarmitaService
         $this->repo->update($id, $dto->data, $dto->refeicao, $dto->quantidade, $dto->observacao);
     }
 
+    /**
+     * Pedidos aprovados num intervalo de até 7 dias.
+     *
+     * @return array{inicio:string,fim:string,dias:list<array{data:string,pedidos:list<array<string,mixed>>,total:int}>}
+     */
+    public function paraImpressao(string $inicio, int $dias): array
+    {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $inicio)) {
+            throw new ValidationException('Informe a data inicial da impressão.');
+        }
+        $dias = max(1, min(7, $dias));
+        $fim = date('Y-m-d', strtotime($inicio . ' +' . ($dias - 1) . ' days'));
+        $porData = [];
+        for ($i = 0; $i < $dias; $i++) {
+            $data = date('Y-m-d', strtotime($inicio . ' +' . $i . ' days'));
+            $porData[$data] = ['data' => $data, 'pedidos' => [], 'total' => 0];
+        }
+        foreach ($this->repo->aprovadosEntre($inicio, $fim) as $pedido) {
+            $data = $pedido['data_pedido'];
+            if (!isset($porData[$data])) {
+                continue;
+            }
+            $porData[$data]['pedidos'][] = $pedido;
+            $porData[$data]['total'] += (int) $pedido['quantidade'];
+        }
+
+        return [
+            'inicio' => $inicio,
+            'fim'    => $fim,
+            'dias'   => array_values($porData),
+        ];
+    }
+
     /** @return list<array<string,mixed>> */
     public function listar(?int $somenteUsuario = null): array
     {

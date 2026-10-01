@@ -30,6 +30,7 @@ require BASE_PATH . '/database/005_permissoes.php';
 require BASE_PATH . '/database/006_perfis.php';
 require BASE_PATH . '/database/007_efetivo.php';
 require BASE_PATH . '/database/008_numero_monitor.php';
+require BASE_PATH . '/database/009_atestado_troca.php';
 
 // Garante senha conhecida (password) para o admin e demais
 $hash = password_hash('123456', PASSWORD_BCRYPT);

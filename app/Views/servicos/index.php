@@ -15,7 +15,8 @@ $render = function (array $lista, bool $vazioFuturo) {
         echo '<li class="py-3 flex flex-wrap items-center justify-between gap-3">';
         echo '<div>';
         echo '<p class="font-medium ' . ($injust ? 'text-crimson-700' : 'text-olive-900') . '">' . Calendar::weekdayBr($p['data_servico']) . ', ' . Calendar::formatBr($p['data_servico']) . '</p>';
-        echo '<p class="text-xs text-olive-600 capitalize">' . htmlspecialchars($p['funcao']) . ' · ' . str_replace('_', ' ', htmlspecialchars($p['status'])) . '</p>';
+        $troca = !empty($p['trocado']) ? ' · Trocado' : ' · Não trocado';
+        echo '<p class="text-xs text-olive-600 capitalize">' . htmlspecialchars($p['funcao']) . ' · ' . str_replace('_', ' ', htmlspecialchars($p['status'])) . $troca . '</p>';
         echo '</div>';
         echo '<div class="flex items-center gap-2">';
         echo '<span class="text-[10px] uppercase tracking-wider px-2 py-1 rounded ' . ($vermelha ? 'bg-red-100 text-crimson-700' : 'bg-olive-100 text-olive-800') . '">' . htmlspecialchars($p['tipo']) . '</span>';

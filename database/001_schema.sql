@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
     senha_hash    TEXT    NOT NULL,
     perfil        TEXT    NOT NULL CHECK (perfil IN ('admin', 'atirador', 'monitor')),
     ativo         INTEGER NOT NULL DEFAULT 1,
+    atestado        INTEGER NOT NULL DEFAULT 0,
+    atestado_inicio TEXT,
+    atestado_dias   INTEGER,
     criado_em     TEXT    NOT NULL DEFAULT (datetime('now','localtime')),
     atualizado_em TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
 );
@@ -40,6 +43,7 @@ CREATE TABLE IF NOT EXISTS escala_postos (
     usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
     funcao        TEXT    NOT NULL CHECK (funcao IN ('monitor', 'atirador', 'reserva')),
     status        TEXT    NOT NULL DEFAULT 'escalado' CHECK (status IN ('escalado', 'falta_injustificada', 'falta_justificada', 'substituido')),
+    trocado       INTEGER NOT NULL DEFAULT 0,
     UNIQUE (escala_id, usuario_id)
 );
 

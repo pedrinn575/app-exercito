@@ -29,7 +29,12 @@ use App\Utils\Auth;
         <tr class="border-t border-olive-100 hover:bg-olive-50/50">
           <td class="px-6 py-3 font-medium text-olive-900"><?= htmlspecialchars($m->numero) ?></td>
           <td class="px-3 py-3 text-olive-700"><?= htmlspecialchars($m->numeroMonitor ?? '—') ?></td>
-          <td class="px-3 py-3"><?= htmlspecialchars($m->nome) ?></td>
+          <td class="px-3 py-3">
+            <?= htmlspecialchars($m->nome) ?>
+            <?php if ($m->atestadoAberto()): ?>
+              <span class="ml-1 text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Atestado<?= $m->fimAtestado() ? ' até ' . \App\Utils\Calendar::formatBr($m->fimAtestado()) : '' ?></span>
+            <?php endif; ?>
+          </td>
           <td class="px-3 py-3">
             <span class="text-xs uppercase tracking-wider px-2 py-0.5 rounded bg-olive-100 text-olive-700"><?= htmlspecialchars($m->perfil) ?></span>
           </td>

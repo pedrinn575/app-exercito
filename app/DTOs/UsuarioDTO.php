@@ -16,6 +16,9 @@ final class UsuarioDTO
         public string $perfil,
         public ?string $email = null,
         public ?string $senha = null,
+        public bool $atestado = false,
+        public ?string $atestadoInicio = null,
+        public ?int $atestadoDias = null,
     ) {}
 
     public static function fromRequest(array $data): self
@@ -26,6 +29,19 @@ final class UsuarioDTO
         $perfil = trim((string) ($data['perfil'] ?? 'atirador'));
         $email = trim((string) ($data['email'] ?? '')) ?: null;
         $senha = (string) ($data['senha'] ?? '') ?: null;
+        $atestado = !empty($data['atestado']);
+        $atestadoInicio = null;
+        $atestadoDias = null;
+        if ($atestado) {
+            $atestadoInicio = trim((string) ($data['atestado_inicio'] ?? '')) ?: date('Y-m-d');
+            $atestadoDias = (int) ($data['atestado_dias'] ?? 0);
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $atestadoInicio)) {
+                throw new ValidationException('Informe o início do atestado.');
+            }
+            if ($atestadoDias < 1 || $atestadoDias > 365) {
+                throw new ValidationException('A quantidade de dias do atestado deve ficar entre 1 e 365.');
+            }
+        }
 
         if ($nome === '' || $numero === '') {
             throw new ValidationException('Nome e número são obrigatórios.');
@@ -45,6 +61,6 @@ final class UsuarioDTO
             $numeroMonitor = null;
         }
 
-        return new self($nome, $numero, $numeroMonitor, $perfil, $email, $senha);
+        return new self($nome, $numero, $numeroMonitor, $perfil, $email, $senha, $atestado, $atestadoInicio, $atestadoDias);
     }
 }

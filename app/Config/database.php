@@ -32,6 +32,7 @@ final class Database
                     PDO::ATTR_EMULATE_PREPARES   => false,
                 ]);
                 self::$pdo->exec('PRAGMA foreign_keys = ON');
+                require BASE_PATH . '/database/009_atestado_troca.php';
             } catch (PDOException $e) {
                 throw new PDOException('Falha ao conectar ao banco: ' . $e->getMessage());
             }

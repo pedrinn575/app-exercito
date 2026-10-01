@@ -89,10 +89,11 @@ final class UsuarioRepository
     public function create(Usuario $u): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO usuarios (nome, numero, numero_monitor, email, senha_hash, perfil, ativo) VALUES (?,?,?,?,?,?,?)'
+            'INSERT INTO usuarios (nome, numero, numero_monitor, email, senha_hash, perfil, ativo, atestado, atestado_inicio, atestado_dias) VALUES (?,?,?,?,?,?,?,?,?,?)'
         );
         $stmt->execute([
-            $u->nome, $u->numero, $u->numeroMonitor, $u->email, $u->senhaHash, $u->perfil, $u->ativo ? 1 : 0,
+            $u->nome, $u->numero, $u->numeroMonitor, $u->email, $u->senhaHash, $u->perfil, $u->ativo ? 1 : 0, $u->atestado ? 1 : 0,
+            $u->atestadoInicio, $u->atestadoDias,
         ]);
         return (int) $this->db->lastInsertId();
     }
@@ -100,9 +101,12 @@ final class UsuarioRepository
     public function update(Usuario $u): void
     {
         $stmt = $this->db->prepare(
-            'UPDATE usuarios SET nome=?, numero=?, numero_monitor=?, email=?, perfil=?, ativo=?, atualizado_em=datetime(\'now\',\'localtime\') WHERE id=?'
+            'UPDATE usuarios SET nome=?, numero=?, numero_monitor=?, email=?, perfil=?, ativo=?, atestado=?, atestado_inicio=?, atestado_dias=?, atualizado_em=datetime(\'now\',\'localtime\') WHERE id=?'
         );
-        $stmt->execute([$u->nome, $u->numero, $u->numeroMonitor, $u->email, $u->perfil, $u->ativo ? 1 : 0, $u->id]);
+        $stmt->execute([
+            $u->nome, $u->numero, $u->numeroMonitor, $u->email, $u->perfil, $u->ativo ? 1 : 0, $u->atestado ? 1 : 0,
+            $u->atestadoInicio, $u->atestadoDias, $u->id,
+        ]);
     }
 
     public function updateSenha(int $id, string $hash): void
@@ -115,6 +119,20 @@ final class UsuarioRepository
     {
         $stmt = $this->db->prepare('UPDATE usuarios SET ativo=0 WHERE id=?');
         $stmt->execute([$id]);
+    }
+
+    /** @return list<Usuario> */
+    public function comAtestado(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT * FROM usuarios
+             WHERE ativo = 1 AND atestado = 1 AND perfil <> 'admin'
+             ORDER BY atestado_inicio, CAST(numero AS INTEGER), numero"
+        );
+        return array_values(array_filter(
+            array_map([Usuario::class, 'fromRow'], $stmt->fetchAll()),
+            fn(Usuario $u) => $u->atestadoAberto()
+        ));
     }
 
     public function countAtivos(): int

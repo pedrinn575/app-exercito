@@ -196,9 +196,13 @@ final class EscalaRepository
         return $row ?: null;
     }
 
-    public function updatePostoUsuario(int $postoId, int $novoUsuarioId): void
+    public function updatePostoUsuario(int $postoId, int $novoUsuarioId, bool $trocado = false): void
     {
-        $stmt = $this->db->prepare('UPDATE escala_postos SET usuario_id = ? WHERE id = ?');
+        if ($trocado) {
+            $stmt = $this->db->prepare('UPDATE escala_postos SET usuario_id = ?, trocado = 1 WHERE id = ?');
+        } else {
+            $stmt = $this->db->prepare('UPDATE escala_postos SET usuario_id = ? WHERE id = ?');
+        }
         $stmt->execute([$novoUsuarioId, $postoId]);
     }
 
@@ -289,7 +293,7 @@ final class EscalaRepository
     public function postosDoUsuario(int $usuarioId): array
     {
         $stmt = $this->db->prepare(
-            'SELECT ep.id, ep.funcao, ep.status, e.tipo, e.data_servico
+            'SELECT ep.id, ep.funcao, ep.status, ep.trocado, e.tipo, e.data_servico
              FROM escala_postos ep
              JOIN escalas e ON e.id = ep.escala_id
              WHERE ep.usuario_id = ?

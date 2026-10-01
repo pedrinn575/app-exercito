@@ -80,6 +80,22 @@ final class MarmitaRepository
         return $stmt->fetchAll();
     }
 
+    /** @return list<array<string,mixed>> */
+    public function aprovadosEntre(string $inicio, string $fim): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT m.*, u.nome, u.numero
+             FROM marmitas m
+             JOIN usuarios u ON u.id = m.usuario_id
+             WHERE m.status = 'aprovado'
+               AND m.data_pedido >= ?
+               AND m.data_pedido <= ?
+             ORDER BY m.data_pedido, CAST(u.numero AS INTEGER), u.nome"
+        );
+        $stmt->execute([$inicio, $fim]);
+        return $stmt->fetchAll();
+    }
+
     public function updateStatus(int $id, string $status, ?string $retorno = null): void
     {
         $stmt = $this->db->prepare('UPDATE marmitas SET status = ?, retorno = ? WHERE id = ?');
